@@ -109,5 +109,5 @@ print(f'    robosuite={robosuite.__version__}')
 print(f'    GPU={torch.cuda.get_device_name() if torch.cuda.is_available() else \"NONE\"}')
 "
 
-echh "Jobs done :^)"
+echo "Jobs done :^)"
 
