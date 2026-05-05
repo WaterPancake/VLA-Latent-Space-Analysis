@@ -480,9 +480,13 @@ from libero.libero import benchmark, get_libero_path
 from libero.libero.envs import OffScreenRenderEnv
 import numpy as np
 
+<<<<<<< HEAD
 # libero_10 to match the SAFE paper / our planned eval suite
 benchmark_dict = benchmark.get_benchmark_dict()
 task_suite = benchmark_dict["libero_10"]()
+=======
+echo "Jobs done :^)"
+>>>>>>> 38d1509f5a37e3cd77b6b96951d1187b10c2c2e2
 
 task = task_suite.get_task(0)
 bddl_path = os.path.join(get_libero_path("bddl_files"), task.problem_folder, task.bddl_file)
