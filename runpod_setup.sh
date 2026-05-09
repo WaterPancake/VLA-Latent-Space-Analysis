@@ -82,6 +82,7 @@ fail()    { printf '\033[1;31m[setup FAIL] %s\033[0m\n' "$*" >&2; exit 1; }
 section() { printf '\n\033[1;35m===== %s =====\033[0m\n' "$*"; }
 
 # ----- Step 0.5: Setup virtual env ------------------------------------------
+WORKSPACE="/workspace"
 VENV_DIR="${WORKSPACE}/venvs/libero"
 
 export UV_CACHE_DIR="${WORKSPACE}/.cache/uv"
@@ -89,16 +90,17 @@ export PIP_CACHE_DIR="${WORKSPACE}/.cache/pip"
 export HF_HOME="${WORKSPACE}/.cache/huggingface"
 export TORCH_HOME="${WORKSPACE}/.cache/torch"
 export XDG_CACHE_HOME="${WORKSPACE}/.cache"
+export MAX_JOBS=4
 export TMPDIR="${WORKSPACE}/tmp"
 
 mkdir -p \
-    "${UV_CACHE_DIR}" \
-    "${PIP_CACHE_DIR}" \
-    "${HF_HOME}" \
-    "${TORCH_HOME}" \
-    "${XDG_CACHE_HOME}" \
-    "${TMPDIR}"
-
+  "${VENV_DIR}" \
+  "${UV_CACHE_DIR}" \
+  "${PIP_CACHE_DIR}" \
+  "${HF_HOME}" \
+  "${TORCH_HOME}" \
+  "${XDG_CACHE_HOME}" \
+  "${TMPDIR}"
 # ----- Step 1: Verify preinstalled torch -------------------------------------
 section "Step 1 — Verify RunPod template matches expectations"
 
@@ -208,6 +210,8 @@ accelerate>=0.25.0
 sentencepiece==0.1.99
 protobuf
 draccus==0.8.0
+tensorflow==2.20.0
+tensorboard==2.20.0
 
 # --- Used by flash-attn at runtime
 einops
@@ -250,6 +254,16 @@ uv pip compile "${REQ_IN}" \
 log "Lock compiled. Showing key lines:"
 grep -E "^(torch|torchvision|numpy|Pillow|pillow|robosuite|mujoco)==" "${REQ_LOCK}" | head -10 || true
 
+# ----- Step 5.5: Create virtual environment ----------------------------------
+python -m venv "${VENV_DIR}"
+source "${VENV_DIR}/bin/activate"
+
+python -m pip install --upgrade pip
+python -m pip install uv
+
+echo "Using Python: $(which python)"
+echo "Using pip: $(which pip)"
+echo "Using uv: $(which uv)"
 # ----- Step 6: Install from lock --------------------------------------------
 section "Step 6 — Install from lock"
 
@@ -257,10 +271,23 @@ section "Step 6 — Install from lock"
 # index URLs into lock files for security reasons.
 uv pip install \
     -r "${REQ_LOCK}" \
-    --system \
     --require-hashes \
     --extra-index-url "${TORCH_INDEX_URL}" \
     --index-strategy unsafe-best-match # something something
+
+uv pip install -U setuptools wheel packaging ninja
+uv pip install flash-attn --no-build-isolation
+
+python - <<'PY'
+import sys
+import torch
+import flash_attn
+
+print("python:", sys.executable)
+print("torch:", torch.__version__)
+print("cuda:", torch.version.cuda)
+print("flash_attn:", flash_attn.__version__)
+PY
 
 # ----- Step 7: Verify torch wasn't replaced with the CPU wheel --------------
 section "Step 7 — Verify torch is still cu124 + CUDA-capable"
@@ -317,11 +344,9 @@ section "Step 9 — Install flash-attn"
 if python -c "import flash_attn" 2>/dev/null; then
     EXISTING_FA="$(python -c 'import flash_attn; print(flash_attn.__version__)')"
     log "flash-attn already installed (version ${EXISTING_FA}). Skipping."
-    log "To force-reinstall: uv pip uninstall flash-attn --system && re-run this script"
 else
     log "Installing flash-attn from prebuilt wheel..."
     log "URL: ${FLASH_ATTN_WHEEL_URL}"
-    uv pip install --system "${FLASH_ATTN_WHEEL_URL}"
 fi
 
 # ----- Step 10: Flash-attn smoke test ---------------------------------------
@@ -374,7 +399,19 @@ mkdir -p "${LIBERO_DIR}/libero/datasets"
 # --no-deps because LIBERO's setup.py has install_requires=[] but its
 # requirements.txt would re-introduce numpy==1.22.4 etc. We installed the
 # real deps already in step 6.
-uv pip install --system --no-deps -e "${LIBERO_DIR}"
+
+log "Installing LIBERO editable with --no-deps..."
+python -m pip install -e "${LIBERO_DIR}" --no-deps
+
+python - <<'PY'
+import sys
+print("python:", sys.executable)
+
+import libero
+print("top-level libero:", libero.__file__)
+
+print("nested libero import OK")
+PY
 
 log "LIBERO installed (editable)."
 
@@ -470,7 +507,6 @@ PY
 section "Step 14 — LIBERO env smoke test (reset + render + step)"
 
 # Real test: actually instantiate an env and render. If EGL is misconfigured,
-# this fails here, not during your first rollout an hour into a debugging session.
 
 python <<'PY'
 import os
@@ -480,13 +516,9 @@ from libero.libero import benchmark, get_libero_path
 from libero.libero.envs import OffScreenRenderEnv
 import numpy as np
 
-<<<<<<< HEAD
 # libero_10 to match the SAFE paper / our planned eval suite
 benchmark_dict = benchmark.get_benchmark_dict()
 task_suite = benchmark_dict["libero_10"]()
-=======
-echo "Jobs done :^)"
->>>>>>> 38d1509f5a37e3cd77b6b96951d1187b10c2c2e2
 
 task = task_suite.get_task(0)
 bddl_path = os.path.join(get_libero_path("bddl_files"), task.problem_folder, task.bddl_file)
