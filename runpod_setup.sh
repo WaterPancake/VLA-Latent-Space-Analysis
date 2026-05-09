@@ -552,6 +552,19 @@ env.close()
 print("LIBERO env smoke test passed.")
 PY
 
+
+# ----- Setup Jupyter kernal using virtual env -------------------------------
+source /workspace/venvs/libero/bin/activate
+which python
+python -c "import sys; print(f'venv: {sys.executable}')"
+
+python -m ipykernel install \
+  --user \
+  --name libero \
+  --display-name "Python (libero venv)"
+
+
+log "Virtual env kernal created."
 # ----- Done ------------------------------------------------------------------
 section "All done"
 
