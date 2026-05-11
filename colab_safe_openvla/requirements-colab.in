@@ -1,0 +1,67 @@
+# Top-level Colab deps for SAFE + original OpenVLA LIBERO rollout generation.
+#
+# Install with:
+#   pip install -r requirements-colab.in --extra-index-url https://download.pytorch.org/whl/cu124
+#
+# The original OpenVLA README reports testing with torch 2.2.0,
+# transformers 4.40.1, tokenizers 0.19.1, timm 0.9.10, and flash-attn 2.5.5.
+# For current Colab L4 runtimes, this file uses torch 2.4.0+cu124 so setup.sh
+# can install a matching prebuilt flash-attn wheel instead of compiling it.
+
+# Torch stack. CUDA wheels come from the extra torch index URL.
+torch==2.4.0
+torchvision==0.19.0
+torchaudio==2.4.0
+
+# OpenVLA tested pins.
+transformers==4.40.1
+tokenizers==0.19.1
+timm==0.9.10
+draccus==0.8.0
+accelerate>=0.25.0
+peft==0.11.1
+bitsandbytes>=0.43.1
+einops
+sentencepiece>=0.2.0
+protobuf
+huggingface_hub
+
+# OpenVLA / prismatic support imports.
+tensorflow==2.20.0
+tensorboard==2.20.0
+jsonlines
+json-numpy
+
+# LIBERO / robosuite runtime. Avoid LIBERO's old requirements pins on Colab.
+robosuite==1.4.1
+bddl==1.0.1
+robomimic==0.3.0
+mujoco>=3.0.0
+gym==0.25.2
+easydict
+h5py
+cloudpickle
+future
+termcolor
+
+# SAFE detector training deps.
+pandas
+scipy
+pyyaml
+tqdm
+imageio[ffmpeg]
+hydra-core
+omegaconf
+scikit-learn
+opencv-python
+wandb
+plotly
+matplotlib
+natsort
+flask
+ml_dtypes
+rich
+
+# Colab compatibility pins.
+numpy>=2.3.5
+Pillow>=12.1.0,!=12.0.*
