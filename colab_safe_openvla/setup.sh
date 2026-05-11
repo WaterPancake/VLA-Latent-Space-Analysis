@@ -128,7 +128,7 @@ os.environ.setdefault("MUJOCO_GL", "osmesa")
 os.environ.setdefault("PYOPENGL_PLATFORM", "osmesa")
 sys.path.insert(0, os.environ["SAFE_OPENVLA_DIR"])
 import torch
-from libero.libero import benchmark
+# from libero.libero import benchmark
 from transformers import AutoProcessor
 import failure_prob
 import prismatic

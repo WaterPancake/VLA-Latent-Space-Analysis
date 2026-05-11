@@ -82,10 +82,42 @@ def regex_replace_once(text: str, pattern: str, replacement: str, label: str) ->
     return text_new
 
 
+def normalize_episode_buffer_block(text: str) -> str:
+    """Insert or repair the per-episode hidden-state buffers.
+
+    The target line lives inside a nested loop, so the patch must preserve the
+    original indentation. Older versions of this patch inserted fixed 8-space
+    indentation, which makes the following `logs_to_dump = []` line invalid.
+    """
+
+    pattern = re.compile(
+        r"\n(?P<indent>[ \t]*)hidden_states_episode = \[\]\n"
+        r"(?:(?P=indent)hidden_states_layers_episode = \[\]\n)?"
+        r"(?:(?P=indent)hidden_layer_indices = None\n)?"
+    )
+
+    def repl(match: re.Match[str]) -> str:
+        indent = match.group("indent")
+        return (
+            f"\n{indent}hidden_states_episode = []\n"
+            f"{indent}hidden_states_layers_episode = []\n"
+            f"{indent}hidden_layer_indices = None\n"
+        )
+
+    text_new, count = pattern.subn(repl, text, count=1)
+    if count != 1:
+        raise RuntimeError(f"Expected one match for episode hidden-state buffers, found {count}")
+    return text_new
+
+
 def patch_file(path: Path) -> None:
     text = path.read_text()
-    if "_extract_selected_hidden_states" in text and "hidden_states_layers" in text:
-        print(f"Already patched: {path}")
+    already_patched = "_extract_selected_hidden_states" in text and "hidden_states_layers" in text
+
+    if already_patched:
+        text = normalize_episode_buffer_block(text)
+        path.write_text(text)
+        print(f"Already patched; normalized selected-layer buffer indentation in: {path}")
         return
 
     text = replace_once(
@@ -107,12 +139,7 @@ def patch_file(path: Path) -> None:
         "dataclass hidden-layer config insertion",
     )
 
-    text = replace_once(
-        text,
-        "        hidden_states_episode = []\n",
-        "        hidden_states_episode = []\n        hidden_states_layers_episode = []\n        hidden_layer_indices = None\n",
-        "episode hidden-state buffers",
-    )
+    text = normalize_episode_buffer_block(text)
 
     text = regex_replace_once(
         text,
@@ -159,4 +186,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
