@@ -64,4 +64,7 @@ rich
 
 # Colab compatibility pins.
 numpy>=2.3.5
-Pillow>=12.1.0,!=12.0.*
+# Avoid Pillow 12.0.x import issues while staying compatible with Colab's
+# preinstalled gradio constraint of Pillow<12.
+Pillow>=11.3.0,<12.0
+jedi>=0.16

@@ -82,7 +82,10 @@ else
     log "Using existing ${OPENVLA_DIR}"
 fi
 python "${SCRIPT_DIR}/patch_openvla_layer_capture.py" "${OPENVLA_DIR}"
-python -m pip install --quiet -e "${OPENVLA_DIR}"
+# Do not pip-install OpenVLA here. Its pyproject pins tensorflow==2.15.0,
+# which is unavailable on current Colab Python 3.12. The runpy wrapper adds
+# this checkout to sys.path before launching the eval script, which is enough
+# for the repo-local `experiments` and `prismatic` imports.
 
 section "Clone/install LIBERO"
 if [[ ! -d "${LIBERO_DIR}/.git" ]]; then
@@ -120,15 +123,19 @@ export SAFE_OPENVLA_ROLLOUT_ROOT="${ROLLOUT_ROOT}"
 section "Smoke imports"
 python - <<'PY'
 import os
+import sys
 os.environ.setdefault("MUJOCO_GL", "osmesa")
 os.environ.setdefault("PYOPENGL_PLATFORM", "osmesa")
+sys.path.insert(0, os.environ["SAFE_OPENVLA_DIR"])
 import torch
 from libero.libero import benchmark
 from transformers import AutoProcessor
 import failure_prob
+import prismatic
 print("CUDA available:", torch.cuda.is_available())
 print("LIBERO suites include:", sorted(benchmark.get_benchmark_dict().keys())[:5], "...")
 print("SAFE import OK:", failure_prob.__file__)
+print("OpenVLA prismatic import OK:", prismatic.__file__)
 print("Transformers import OK:", AutoProcessor.__name__)
 PY
 
