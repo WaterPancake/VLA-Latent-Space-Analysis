@@ -238,6 +238,7 @@ termcolor
 cloudpickle
 future
 matplotlib
+jupyter
 EOF
 
 log "Wrote ${REQ_IN} ($(wc -l < "${REQ_IN}") lines)"
@@ -554,17 +555,17 @@ PY
 
 
 # ----- Setup Jupyter kernal using virtual env -------------------------------
-source /workspace/venvs/libero/bin/activate
-which python
-python -c "import sys; print(f'venv: {sys.executable}')"
+# source /workspace/venvs/libero/bin/activate
+# which python
+# python -c "import sys; print(f'venv: {sys.executable}')"
 
-python -m ipykernel install \
-  --user \
-  --name libero \
-  --display-name "Python (libero venv)"
+# python -m ipykernel install \
+#   --user \
+#   --name libero \
+#   --display-name "Python (libero venv)"
 
 
-log "Virtual env kernal created."
+# log "Virtual env kernal created."
 # ----- Done ------------------------------------------------------------------
 section "All done"
 
